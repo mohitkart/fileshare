@@ -7,9 +7,10 @@ import {
 import { fire } from "@/components/Swal";
 import Modal from "@/components/Modal";
 import HostQr from "@/components/HostQr";
+import FileIcon from "@/components/FileIcon";
 
 export default function FileManager() {
-  const [currentPath, setCurrentPath] = useState("");
+  const [currentPath, setCurrentPath] = useState('');
   const [folders, setFolders] = useState<string[]>([]);
   const [files, setFiles] = useState<string[]>([]);
   const [newFolder, setNewFolder] = useState("");
@@ -24,7 +25,6 @@ export default function FileManager() {
   } | null>(null);
 
 
-
   const load = async () => {
     const res = await fetch(`/api/files/list?folder=${currentPath}`);
     const data = await res.json();
@@ -33,8 +33,19 @@ export default function FileManager() {
   };
 
   useEffect(() => {
+    const saved = sessionStorage.getItem("currentPath") || '';
+    
+    if (saved){
+      // eslint-disable-next-line react-hooks/set-state-in-effect
+       setCurrentPath(saved);
+    }
+  }, []);
+
+  useEffect(() => {
+    // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     setSelectedFiles([]);
+    sessionStorage.setItem('currentPath',currentPath)
   }, [currentPath]);
 
   const createFolder = async () => {
@@ -286,6 +297,8 @@ export default function FileManager() {
             }`}
         >
 
+          {files.length?<div className="mb-3">Total Files : {files.length}</div>:<></>}
+
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {folders.map((f) => (
               <div
@@ -294,6 +307,9 @@ export default function FileManager() {
                 onDoubleClick={() =>
                   setCurrentPath(`${currentPath}/${f}`)
                 }
+                onTouchStart={()=>{
+                   setCurrentPath(`${currentPath}/${f}`)
+                }}
               >
                 <FolderIcon className="w-10 h-10 text-yellow-500" />
                 <p className="truncate">{f}</p>
@@ -306,7 +322,10 @@ export default function FileManager() {
                 />
                 <button
                   className="text-xs text-blue-600 cursor-pointer"
-                  onClick={() => renameItem(f)}
+                  onClick={(e) => {
+                      e.stopPropagation()
+                      renameItem(f)
+                    }}
                 >
                   Rename
                 </button>
@@ -326,8 +345,8 @@ export default function FileManager() {
                 onContextMenu={(e) => {
                   e.preventDefault();
                   setContextMenu({
-                    x: e.pageX,
-                    y: e.pageY,
+                    x: e.clientX,
+                    y: e.clientY,
                     name: f,
                     type: "file",
                   });
@@ -348,8 +367,11 @@ export default function FileManager() {
                   />
 
                   <div>
-                    <DocumentIcon className="w-8 h-8 text-blue-500" />
-                    <p className="w-full block">{f}</p>
+                    <FileIcon className="w-8 h-8 text-blue-500" 
+                    fileName={f}
+                    />
+                      <p className="break-all">{f}</p>
+                   
                   </div>
                 </div>
 
@@ -372,7 +394,10 @@ export default function FileManager() {
                   />
                   <button
                     className="text-xs text-blue-600 cursor-pointer"
-                    onClick={() => renameItem(f)}
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      renameItem(f)
+                    }}
                   >
                     Rename
                   </button>
