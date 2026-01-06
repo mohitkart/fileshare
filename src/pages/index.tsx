@@ -1,78 +1,418 @@
-import Image from "next/image";
-import { Geist, Geist_Mono } from "next/font/google";
+import { useEffect, useState } from "react";
+import {
+  FolderIcon,
+  DocumentIcon,
+  TrashIcon,
+} from "@heroicons/react/24/outline";
+import { fire } from "@/components/Swal";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
-});
+export default function FileManager() {
+  const [currentPath, setCurrentPath] = useState("");
+  const [folders, setFolders] = useState<string[]>([]);
+  const [files, setFiles] = useState<string[]>([]);
+  const [newFolder, setNewFolder] = useState("");
+  const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
+  const [dragging, setDragging] = useState(false);
+  const [contextMenu, setContextMenu] = useState<{
+  x: number;
+  y: number;
+  name: string;
+  type: "file" | "folder";
+} | null>(null);
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
-});
 
-export default function Home() {
+
+  const load = async () => {
+    const res = await fetch(`/api/files/list?folder=${currentPath}`);
+    const data = await res.json();
+    setFolders(data.folders);
+    setFiles(data.files);
+  };
+
+  useEffect(() => {
+    load();
+    setSelectedFiles([]);
+  }, [currentPath]);
+
+  const createFolder = async () => {
+    if (!newFolder.trim()) return;
+
+    await fetch("/api/folders/create", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        folderPath: currentPath,
+        folderName: newFolder,
+      }),
+    });
+
+    setNewFolder("");
+    load();
+  };
+
+  const uploadFiles = async (list: FileList | null) => {
+    if (!list) return;
+
+    const fd = new FormData();
+    Array.from(list).forEach((f) => fd.append("files", f));
+
+    await fetch(`/api/files/upload?folder=${currentPath}`, {
+      method: "POST",
+      body: fd,
+    });
+
+    load();
+  };
+
+  const deleteItem = async (name: string) => {
+    const targetPath = `${currentPath}/${name}`;
+    fire({
+      icon: 'warning',
+      title: `Do you want to delete '${name}'?`, cancelButtonText: 'No', confirmButtonText: 'Yes', showCancelButton: true
+    }).then(async res => {
+      if (res.isConfirmed) {
+        await fetch("/api/files/delete", {
+          method: "DELETE",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ targetPath }),
+        });
+
+        load();
+      }
+    })
+
+  };
+
+  const folderTree = currentPath.split('/').filter(itm => itm)
+  const allSelected = files.length == selectedFiles.length
+
+
+  const getBreadcrumbs = () => {
+    const parts = currentPath.split("/").filter(Boolean);
+    return parts.map((part, i) => ({
+      name: part,
+      path: parts.slice(0, i + 1).join("/"),
+    }));
+  };
+
+  const renameItem = async (name: string) => {
+  const newName = prompt("Enter new name", name);
+  if (!newName || newName === name) return;
+
+  await fetch("/api/files/rename", {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      oldPath: `${currentPath}/${name}`,
+      newName,
+    }),
+  });
+
+  load();
+};
+
+
   return (
-    <div
-      className={`${geistSans.className} ${geistMono.className} flex min-h-screen items-center justify-center bg-zinc-50 font-sans dark:bg-black`}
-    >
-      <main className="flex min-h-screen w-full max-w-3xl flex-col items-center justify-between py-32 px-16 bg-white dark:bg-black sm:items-start">
-        <Image
-          className="dark:invert"
-          src="/next.svg"
-          alt="Next.js logo"
-          width={100}
-          height={20}
-          priority
-        />
-        <div className="flex flex-col items-center gap-6 text-center sm:items-start sm:text-left">
-          <h1 className="max-w-xs text-3xl font-semibold leading-10 tracking-tight text-black dark:text-zinc-50">
-            To get started, edit the index.tsx file.
-          </h1>
-          <p className="max-w-md text-lg leading-8 text-zinc-600 dark:text-zinc-400">
-            Looking for a starting point or more instructions? Head over to{" "}
-            <a
-              href="https://vercel.com/templates?framework=next.js&utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Templates
-            </a>{" "}
-            or the{" "}
-            <a
-              href="https://nextjs.org/learn?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-              className="font-medium text-zinc-950 dark:text-zinc-50"
-            >
-              Learning
-            </a>{" "}
-            center.
-          </p>
-        </div>
-        <div className="flex flex-col gap-4 text-base font-medium sm:flex-row">
-          <a
-            className="flex h-12 w-full items-center justify-center gap-2 rounded-full bg-foreground px-5 text-background transition-colors hover:bg-[#383838] dark:hover:bg-[#ccc] md:w-[158px]"
-            href="https://vercel.com/new?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
+    <div className="min-h-screen bg-gray-100 p-6">
+      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow p-6">
+
+        {/* Header */}
+        <div className="flex justify-between items-center mb-6">
+          <h1 className="text-xl font-semibold">📁 File Manager</h1>
+          <input
+            type="file"
+            multiple
+            className="hidden"
+            id="fileUpload"
+            onChange={(e) => uploadFiles(e.target.files)}
+          />
+          <label
+            htmlFor="fileUpload"
+            className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer"
           >
-            <Image
-              className="dark:invert"
-              src="/vercel.svg"
-              alt="Vercel logomark"
-              width={16}
-              height={16}
-            />
-            Deploy Now
-          </a>
-          <a
-            className="flex h-12 w-full items-center justify-center rounded-full border border-solid border-black/[.08] px-5 transition-colors hover:border-transparent hover:bg-black/[.04] dark:border-white/[.145] dark:hover:bg-[#1a1a1a] md:w-[158px]"
-            href="https://nextjs.org/docs/pages/getting-started?utm_source=create-next-app&utm_medium=default-template-tw&utm_campaign=create-next-app"
-            target="_blank"
-            rel="noopener noreferrer"
-          >
-            Documentation
-          </a>
+            Upload
+          </label>
         </div>
-      </main>
+
+        {/* Breadcrumb */}
+        <div className="flex items-center gap-2 text-sm text-gray-600 mb-4">
+          <span
+            className="cursor-pointer text-blue-600"
+            onClick={() => setCurrentPath("")}
+          >
+            Root
+          </span>
+
+          {getBreadcrumbs().map((b) => (
+            <span key={b.path}>
+              /{" "}
+              <span
+                className="cursor-pointer text-blue-600"
+                onClick={() => setCurrentPath(b.path)}
+              >
+                {b.name}
+              </span>
+            </span>
+          ))}
+        </div>
+
+
+        {/* Create Folder */}
+        <form className="flex gap-2 mb-4"
+        onSubmit={e=>{
+          e.preventDefault();
+          createFolder()
+        }}
+        >
+          <input
+            value={newFolder}
+            onChange={(e) => setNewFolder(e.target.value)}
+            placeholder="New folder"
+            className="border rounded px-3 py-1 w-full max-w-60 "
+          />
+          <button
+            className="bg-green-600 text-white px-3 py-1 rounded cursor-pointer"
+          >
+            Create
+          </button>
+        </form>
+
+        <div className="flex gap-3 flex-wrap items-center mb-4">
+          {selectedFiles.length > 0 && (
+            <>
+              <button
+                className="px-4 py-2 bg-indigo-600 text-white rounded"
+                onClick={async () => {
+
+                  const ares = await fire({
+                    icon: 'warning',
+                    title: `Do you want to download selected files?`, cancelButtonText: 'No', confirmButtonText: 'Yes', showCancelButton: true
+                  })
+
+                  if (!ares.isConfirmed) return
+
+                  const res = await fetch("/api/files/download-zip", {
+                    method: "POST",
+                    headers: { "Content-Type": "application/json" },
+                    body: JSON.stringify({
+                      files: selectedFiles,
+                      currentPath,
+                    }),
+                  });
+
+                  const blob = await res.blob();
+                  const url = window.URL.createObjectURL(blob);
+
+                  const a = document.createElement("a");
+                  a.href = url;
+                  a.download = "selected-files.zip";
+                  a.click();
+
+                  window.URL.revokeObjectURL(url);
+                  setSelectedFiles([]);
+                }}
+              >
+                Download Selected ({selectedFiles.length})
+              </button>
+              <button
+                className="px-4 py-2 bg-red-600 text-white rounded"
+                onClick={async () => {
+                  const ares = await fire({
+                    icon: 'warning',
+                    title: `Delete ${selectedFiles.length} selected file(s)?`, cancelButtonText: 'No', confirmButtonText: 'Yes', showCancelButton: true
+                  })
+
+                  if (!ares.isConfirmed) return
+
+                  for (const file of selectedFiles) {
+                    await fetch("/api/files/delete", {
+                      method: "DELETE",
+                      headers: { "Content-Type": "application/json" },
+                      body: JSON.stringify({
+                        targetPath: `${currentPath}/${file}`,
+                      }),
+                    });
+                  }
+
+                  setSelectedFiles([]);
+                  load();
+                }}
+              >
+                Delete Selected ({selectedFiles.length})
+              </button>
+            </>
+          )}
+
+
+          {files.length ? <>
+            <button
+              onClick={() => setSelectedFiles(allSelected ? [] : files)}
+              className="text-sm text-blue-600"
+            >
+              {allSelected ? 'Deselect' : 'Select'} All
+            </button>
+          </> : <></>}
+        </div>
+
+
+
+        {/* Grid */}
+        <div
+          onDragOver={(e) => {
+            e.preventDefault();
+            setDragging(true);
+          }}
+          onDragLeave={() => setDragging(false)}
+          onDrop={(e) => {
+            e.preventDefault();
+            setDragging(false);
+            uploadFiles(e.dataTransfer.files);
+          }}
+          className={`border-2 border-dashed rounded p-4 ${dragging ? "border-blue-500 bg-blue-50" : "border-transparent"
+            }`}
+        >
+
+          <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+            {folders.map((f) => (
+              <div
+                key={f}
+                className="group p-3 border rounded hover:bg-gray-50 cursor-pointer relative"
+                onDoubleClick={() =>
+                  setCurrentPath(`${currentPath}/${f}`)
+                }
+              >
+                <FolderIcon className="w-10 h-10 text-yellow-500" />
+                <p className="truncate">{f}</p>
+                <TrashIcon
+                  className="w-5 h-5 text-red-500 absolute top-2 right-2 sm:block md:hidden group-hover:block"
+                  onClick={(e) => {
+                    e.stopPropagation();
+                    deleteItem(f);
+                  }}
+                />
+                <button
+                  className="text-xs text-blue-600 cursor-pointer"
+                  onClick={() => renameItem(f)}
+                >
+                  Rename
+                </button>
+
+              </div>
+            ))}
+
+            {files.map((f) => (
+              <div
+                key={f}
+                onDoubleClick={() => {
+                  setSelectedFiles((prev) =>
+                    !selectedFiles.includes(f) ? [...prev, f]
+                      : prev.filter((x) => x !== f)
+                  );
+                }}
+                onContextMenu={(e) => {
+                  e.preventDefault();
+                  setContextMenu({
+                    x: e.pageX,
+                    y: e.pageY,
+                    name: f,
+                    type: "file",
+                  });
+                }}
+                className={`group p-3 border rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+              >
+                <div className="flex items-start gap-2">
+                  <input
+                    type="checkbox"
+                    className="h-[20px] w-[20px]"
+                    checked={selectedFiles.includes(f)}
+                    onChange={() => {
+                      setSelectedFiles((prev) =>
+                        !selectedFiles.includes(f) ? [...prev, f]
+                          : prev.filter((x) => x !== f)
+                      );
+                    }}
+                  />
+
+                  <div>
+                    <DocumentIcon className="w-8 h-8 text-blue-500" />
+                    <p className="w-full block">{f}</p>
+                  </div>
+                </div>
+
+                <div className="flex justify-between mt-2">
+                  <a
+                    href={`/storage/${currentPath}/${f}`}
+                    onClick={e => e.stopPropagation()}
+                    download
+                    className="text-blue-600 text-sm"
+                  >
+                    Download
+                  </a>
+
+                  <TrashIcon
+                    className="w-5 h-5 text-red-500 hidden group-hover:block"
+                    onClick={(e) => {
+                      e.stopPropagation();
+                      deleteItem(f)
+                    }}
+                  />
+                  <button
+                    className="text-xs text-blue-600 cursor-pointer"
+                    onClick={() => renameItem(f)}
+                  >
+                    Rename
+                  </button>
+
+                </div>
+              </div>
+            ))}
+
+          </div>
+
+        </div>
+      </div>
+
+
+      {contextMenu && (
+        <div
+          className="fixed bg-white border shadow rounded z-50"
+          style={{ top: contextMenu.y, left: contextMenu.x }}
+          onMouseLeave={() => setContextMenu(null)}
+        >
+          <button
+            className="flex justify-end w-full text-left"
+            onClick={() => {
+              setContextMenu(null);
+            }}
+          >
+            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-4 cursor-pointer text-red-500">
+              <path strokeLinecap="round" strokeLinejoin="round" d="M6 18 18 6M6 6l12 12" />
+            </svg>
+          </button>
+          <button
+            className="block px-4 py-2 hover:bg-gray-100 w-full text-left"
+            onClick={() => {
+              renameItem(contextMenu.name);
+              setContextMenu(null);
+            }}
+          >
+            Rename
+          </button>
+
+          <button
+            className="block px-4 py-2 hover:bg-gray-100 w-full text-left"
+            onClick={() => {
+              deleteItem(contextMenu.name);
+              setContextMenu(null);
+            }}
+          >
+            Delete
+          </button>
+            
+        </div>
+      )}
+
+
     </div>
   );
 }
