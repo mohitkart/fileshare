@@ -33,7 +33,7 @@ export default function FileManager() {
   };
 
   useEffect(() => {
-    const saved = sessionStorage.getItem("currentPath") || '';
+    const saved = localStorage.getItem("currentPath") || '';
     
     if (saved){
       // eslint-disable-next-line react-hooks/set-state-in-effect
@@ -45,7 +45,7 @@ export default function FileManager() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     setSelectedFiles([]);
-    sessionStorage.setItem('currentPath',currentPath)
+    localStorage.setItem('currentPath',currentPath)
   }, [currentPath]);
 
   const createFolder = async () => {
