@@ -1,13 +1,14 @@
 import { useEffect, useState } from "react";
 import {
   FolderIcon,
-  DocumentIcon,
   TrashIcon,
 } from "@heroicons/react/24/outline";
 import { fire } from "@/components/Swal";
 import Modal from "@/components/Modal";
 import HostQr from "@/components/HostQr";
 import FileIcon from "@/components/FileIcon";
+import { isImage, isVideo } from "@/utils/shared";
+import VideoHtml from "@/components/VideoHtml";
 
 export default function FileManager() {
   const [currentPath, setCurrentPath] = useState('');
@@ -17,6 +18,9 @@ export default function FileManager() {
   const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
   const [dragging, setDragging] = useState(false);
   const [isQr, setIsQr] = useState(false);
+  const [uploading, setUploading] = useState(false);
+  const [fileLoading, setFileLoading] = useState(false);
+  const [viewModal, setViewModal] = useState('');
   const [contextMenu, setContextMenu] = useState<{
     x: number;
     y: number;
@@ -26,18 +30,20 @@ export default function FileManager() {
 
 
   const load = async () => {
+    setFileLoading(true)
     const res = await fetch(`/api/files/list?folder=${currentPath}`);
     const data = await res.json();
     setFolders(data.folders);
     setFiles(data.files);
+    setFileLoading(false)
   };
 
   useEffect(() => {
     const saved = localStorage.getItem("currentPath") || '';
-    
-    if (saved){
+
+    if (saved) {
       // eslint-disable-next-line react-hooks/set-state-in-effect
-       setCurrentPath(saved);
+      setCurrentPath(saved);
     }
   }, []);
 
@@ -45,7 +51,7 @@ export default function FileManager() {
     // eslint-disable-next-line react-hooks/set-state-in-effect
     load();
     setSelectedFiles([]);
-    localStorage.setItem('currentPath',currentPath)
+    localStorage.setItem('currentPath', currentPath)
   }, [currentPath]);
 
   const createFolder = async () => {
@@ -65,15 +71,16 @@ export default function FileManager() {
   };
 
   const uploadFiles = async (list: FileList | null) => {
+    if (uploading) return
     if (!list) return;
-
     const fd = new FormData();
     Array.from(list).forEach((f) => fd.append("files", f));
-
+    setUploading(true)
     await fetch(`/api/files/upload?folder=${currentPath}`, {
       method: "POST",
       body: fd,
     });
+    setUploading(false)
 
     load();
   };
@@ -126,8 +133,8 @@ export default function FileManager() {
 
 
   return (
-    <div className="min-h-screen bg-gray-100 p-6">
-      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow p-6">
+    <div className="min-h-screen bg-gray-100 p-4">
+      <div className="max-w-6xl mx-auto bg-white rounded-lg shadow p-4">
 
         {/* Header */}
         <div className="flex gap-2 items-center mb-6">
@@ -137,7 +144,10 @@ export default function FileManager() {
             multiple
             className="hidden"
             id="fileUpload"
-            onChange={(e) => uploadFiles(e.target.files)}
+            onChange={(e) => {
+              uploadFiles(e.target.files)
+              e.target.value=""
+            }}
           />
 
           <button
@@ -154,7 +164,7 @@ export default function FileManager() {
             htmlFor="fileUpload"
             className="px-4 py-2 bg-blue-600 text-white rounded cursor-pointer"
           >
-            Upload
+            {uploading ? 'Uploading...' : 'Upload'}
           </label>
 
         </div>
@@ -202,16 +212,16 @@ export default function FileManager() {
           </button>
         </form>
 
-        <div className="flex gap-3 flex-wrap items-center mb-4">
+        <div className="flex gap-2 flex-wrap items-center sticky top-0 z-9 py-2 bg-white">
           {selectedFiles.length > 0 && (
             <>
               <button
-                className="px-4 py-2 bg-indigo-600 text-white rounded"
+                className="px-2 py-2 bg-indigo-600 text-white rounded flex gap-1 items-center cursor-pointer"
                 onClick={async () => {
 
                   const ares = await fire({
                     icon: 'warning',
-                    title: `Do you want to download selected files?`, cancelButtonText: 'No', confirmButtonText: 'Yes', showCancelButton: true
+                    title: `Do you want to download ${selectedFiles.length} selected file(s)?`, cancelButtonText: 'No', confirmButtonText: 'Yes', showCancelButton: true
                   })
 
                   if (!ares.isConfirmed) return
@@ -237,10 +247,12 @@ export default function FileManager() {
                   setSelectedFiles([]);
                 }}
               >
-                Download Selected ({selectedFiles.length})
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                </svg> ({selectedFiles.length})
               </button>
               <button
-                className="px-4 py-2 bg-red-600 text-white rounded"
+                className="px-2 py-2 bg-red-600 text-white rounded flex gap-1 items-center cursor-pointer"
                 onClick={async () => {
                   const ares = await fire({
                     icon: 'warning',
@@ -263,7 +275,10 @@ export default function FileManager() {
                   load();
                 }}
               >
-                Delete Selected ({selectedFiles.length})
+                <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                    <path strokeLinecap="round" strokeLinejoin="round" d="m14.74 9-.346 9m-4.788 0L9.26 9m9.968-3.21c.342.052.682.107 1.022.166m-1.022-.165L18.16 19.673a2.25 2.25 0 0 1-2.244 2.077H8.084a2.25 2.25 0 0 1-2.244-2.077L4.772 5.79m14.456 0a48.108 48.108 0 0 0-3.478-.397m-12 .562c.34-.059.68-.114 1.022-.165m0 0a48.11 48.11 0 0 1 3.478-.397m7.5 0v-.916c0-1.18-.91-2.164-2.09-2.201a51.964 51.964 0 0 0-3.32 0c-1.18.037-2.09 1.022-2.09 2.201v.916m7.5 0a48.667 48.667 0 0 0-7.5 0" />
+                  </svg>
+                  ({selectedFiles.length})
               </button>
             </>
           )}
@@ -272,7 +287,7 @@ export default function FileManager() {
           {files.length ? <>
             <button
               onClick={() => setSelectedFiles(allSelected ? [] : files)}
-              className="text-sm text-blue-600"
+              className="text-sm text-blue-600 cursor-pointer"
             >
               {allSelected ? 'Deselect' : 'Select'} All
             </button>
@@ -293,25 +308,28 @@ export default function FileManager() {
             setDragging(false);
             uploadFiles(e.dataTransfer.files);
           }}
-          className={`border-2 border-dashed rounded p-4 ${dragging ? "border-blue-500 bg-blue-50" : "border-transparent"
+          className={`border-2 border-dashed rounded ${dragging ? "border-blue-500 bg-blue-50 p-2" : "border-transparent p-0"
             }`}
         >
 
-          {files.length?<div className="mb-3">Total Files : {files.length}</div>:<></>}
+          {fileLoading?<>
+            <div className="p-3 text-center">Loading...</div>
+          </>:<>
+           {files.length ? <div className="mb-3">Total Files : {files.length}</div> : <></>}
 
           <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
             {folders.map((f) => (
               <div
                 key={f}
-                className="group p-3 border rounded hover:bg-gray-50 cursor-pointer relative"
+                className="group p-3 border border-gray-300 rounded hover:bg-gray-50 cursor-pointer relative"
                 onDoubleClick={() =>
                   setCurrentPath(`${currentPath}/${f}`)
                 }
-                onTouchStart={()=>{
-                   setCurrentPath(`${currentPath}/${f}`)
+                onTouchStart={() => {
+                  setCurrentPath(`${currentPath}/${f}`)
                 }}
               >
-                <FolderIcon className="w-10 h-10 text-yellow-500" />
+                <FolderIcon className="size-[50px] text-yellow-500" />
                 <p className="truncate">{f}</p>
                 <TrashIcon
                   className="w-5 h-5 text-red-500 absolute top-2 right-2 sm:block md:hidden group-hover:block"
@@ -323,20 +341,24 @@ export default function FileManager() {
                 <button
                   className="text-xs text-blue-600 cursor-pointer"
                   onClick={(e) => {
-                      e.stopPropagation()
-                      renameItem(f)
-                    }}
+                    e.stopPropagation()
+                    renameItem(f)
+                  }}
                 >
                   Rename
                 </button>
-
               </div>
             ))}
 
             {files.map((f) => (
               <div
                 key={f}
-                onDoubleClick={() => {
+                onDoubleClick={(e) => {
+                  e.preventDefault()
+                  e.stopPropagation()
+                  setViewModal(f)
+                }}
+                onClick={() => {
                   setSelectedFiles((prev) =>
                     !selectedFiles.includes(f) ? [...prev, f]
                       : prev.filter((x) => x !== f)
@@ -351,7 +373,7 @@ export default function FileManager() {
                     type: "file",
                   });
                 }}
-                className={`group p-3 border rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                className={`group p-3 border border-gray-300 rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
               >
                 <div className="flex items-start gap-2">
                   <input
@@ -367,11 +389,12 @@ export default function FileManager() {
                   />
 
                   <div>
-                    <FileIcon className="w-8 h-8 text-blue-500" 
-                    fileName={f}
+                    <FileIcon className="w-8 h-8 text-blue-500"
+                      fileName={f}
+                      path={`/storage/${currentPath}/${f}`}
                     />
-                      <p className="break-all">{f}</p>
-                   
+                    <p className="break-all">{f}</p>
+
                   </div>
                 </div>
 
@@ -383,13 +406,13 @@ export default function FileManager() {
                     className="text-blue-600 text-sm"
                   >
                     <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-  <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-</svg>
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                    </svg>
 
                   </a>
 
                   <TrashIcon
-                    className="w-5 h-5 text-red-500 hidden group-hover:block"
+                    className="w-5 h-5 text-red-500 hidden group-hover:block cursor-pointer"
                     onClick={(e) => {
                       e.stopPropagation();
                       deleteItem(f)
@@ -404,12 +427,27 @@ export default function FileManager() {
                   >
                     Rename
                   </button>
+                  <button
+                    className="text-xs text-blue-600 cursor-pointer"
+                    onClick={(e) => {
+                      e.stopPropagation()
+                      setViewModal(f)
+                    }}
+                  >
+                    <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                      <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                    </svg>
 
+                  </button>
                 </div>
               </div>
             ))}
 
           </div>
+          </>}
+
+         
 
         </div>
       </div>
@@ -450,6 +488,15 @@ export default function FileManager() {
           >
             Delete
           </button>
+          <button
+            className="block px-4 py-2 hover:bg-gray-100 w-full text-left"
+            onClick={() => {
+              setViewModal(contextMenu.name);
+              setContextMenu(null);
+            }}
+          >
+            View
+          </button>
 
         </div>
       )}
@@ -460,6 +507,30 @@ export default function FileManager() {
           result={() => setIsQr(false)}
           body={<>
             <HostQr />
+          </>}
+        />
+      </> : <></>}
+
+      {viewModal ? <>
+        <Modal
+          result={() => setViewModal('')}
+          className="max-w-[900px]"
+          body={<>
+            {isImage(viewModal) ? <div>
+              <img
+                alt={viewModal}
+                src={`/storage/${currentPath}/${viewModal}`}
+                className="w-full max-h-[calc(100dvh-20px)] object-contain"
+              />
+            </div> : isVideo(viewModal) ? <div>
+              <VideoHtml
+                src={`/storage/${currentPath}/${viewModal}`}
+                className="w-full max-h-[calc(100dvh-20px)] object-contain"
+              />
+            </div> : <div>
+              <FileIcon />
+            </div>
+            }
           </>}
         />
       </> : <></>}

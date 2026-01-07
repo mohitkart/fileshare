@@ -157,7 +157,7 @@ const Modal: React.FC<
               onClick={() =>
                 onClose({ isConfirmed: false, isDismissed: true })
               }
-              className="px-4 py-2 rounded-md text-sm font-medium border border-gray-200 text-gray-700"
+              className="px-4 py-2 rounded-md text-sm font-medium border border-gray-200 text-gray-700 cursor-pointer"
             >
               {cfg.cancelButtonText}
             </button>
@@ -165,7 +165,7 @@ const Modal: React.FC<
           <button
             onClick={() => onClose({ isConfirmed: true, isDismissed: false })}
             style={{ backgroundColor: cfg.confirmButtonColor }}
-            className="px-4 py-2 rounded-md text-sm font-medium text-white shadow-sm"
+            className="px-4 py-2 rounded-md text-sm font-medium text-white shadow-sm cursor-pointer"
           >
             {cfg.confirmButtonText}
           </button>
