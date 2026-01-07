@@ -1,3 +1,4 @@
+/* eslint-disable @typescript-eslint/no-explicit-any */
 import { useEffect, useRef, useState } from "react";
 import Modal from "@/components/Modal";
 import HostQr from "@/components/HostQr";
@@ -11,9 +12,6 @@ export default function Main() {
   const [uploading, setUploading] = useState(false);
   const childRef = useRef<FilesListRef>(null);
 
-  const load = async () => {
-    childRef.current?.loadData()
-  };
 
   const createFolder = async () => {
     if (!newFolder.trim()) return;
@@ -28,7 +26,7 @@ export default function Main() {
     });
 
     setNewFolder("");
-    load();
+    childRef.current?.loadData()
   };
 
   useEffect(()=>{
@@ -52,7 +50,7 @@ export default function Main() {
       body: fd,
     });
     setUploading(false)
-    load();
+    childRef?.current?.loadData()
   };
 
 
@@ -150,6 +148,7 @@ export default function Main() {
             currentPath={currentPath}
             setCurrentPath={setCurrentPath}
             uploadFiles={uploadFiles}
+            ref={childRef}
           />
         </> : <></>}
 

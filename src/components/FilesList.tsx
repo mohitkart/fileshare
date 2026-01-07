@@ -24,7 +24,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
         const [files, setFiles] = useState<string[]>([]);
         const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
         const [dragging, setDragging] = useState(false);
-        const [fileLoading, setFileLoading] = useState(false);
+        const [fileLoading, setFileLoading] = useState(true);
         const [viewModal, setViewModal] = useState('');
         const [contextMenu, setContextMenu] = useState<{
             x: number;
@@ -38,7 +38,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
             const res = await fetch(`/api/files/list?folder=${currentPath}`);
             const data = await res.json();
             setFolders(data.folders);
-            setFiles(data.files);
+            setFiles(data.files.map((itm:any)=>({f:itm,path:`/storage/${currentPath}/${itm}`})));
             setFileLoading(false)
         }
 
@@ -89,7 +89,6 @@ const FilesList = forwardRef<FilesListRef, Props>(
             // eslint-disable-next-line react-hooks/set-state-in-effect
             load();
             setSelectedFiles([]);
-            localStorage.setItem('currentPath', currentPath)
         }, [currentPath]);
 
 
@@ -177,8 +176,6 @@ const FilesList = forwardRef<FilesListRef, Props>(
                 </> : <></>}
             </div>
 
-
-
             {/* Grid */}
             <div
                 onDragOver={(e) => {
@@ -233,7 +230,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
                             </div>
                         ))}
 
-                        {files.map((f) => (
+                        {files.map(({f,path}:any) => (
                             <div
                                 key={f}
                                 onDoubleClick={(e) => {
@@ -274,7 +271,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
                                     <div>
                                         <FileIcon className="w-8 h-8 text-blue-500"
                                             fileName={f}
-                                            path={`/storage/${currentPath}/${f}`}
+                                            path={path}
                                         />
                                         <p className="break-all">{f}</p>
 
