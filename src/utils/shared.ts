@@ -3,7 +3,7 @@ export const isVideo = (fileName: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ext: any = fileName.split(".").pop()?.toLowerCase() || "";
 
-    return (ext == 'mp4') ? true : false
+    return (ext == 'mp4'||ext == 'mov') ? true : false
 }
 
 // eslint-disable-next-line @typescript-eslint/no-explicit-any

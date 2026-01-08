@@ -58,7 +58,7 @@ export default function Main() {
     const parts = currentPath.split("/").filter(Boolean);
     return parts.map((part, i) => ({
       name: part,
-      path: parts.slice(0, i + 1).join("/"),
+      path: `/${parts.slice(0, i + 1).join("/")}`,
     }));
   };
 

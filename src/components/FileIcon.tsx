@@ -1,19 +1,24 @@
 import { isImage, isVideo } from "@/utils/shared";
 import VideoHtml from "./VideoHtml";
+import Image from "next/image";
 
 export default function FileIcon({
     className = "size-6",
     fileName = '',
-    path = ''
+    path = '',
+    height=0,
+    width=0
 }) {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ext: any = fileName.split(".").pop()?.toLowerCase() || "";
     // const ext: any = "";
     return <>
-        {isImage(fileName) ? <img
+        {isImage(fileName) ? <Image
             src={`${path}`}
             alt={fileName}
             className="w-full h-[200px] object-contain"
+            height={height||undefined}
+            width={width||undefined}
 
         /> : isVideo(fileName) ? <div
             className="relative"

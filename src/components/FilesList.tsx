@@ -6,6 +6,7 @@ import FileIcon from "./FileIcon";
 import Modal from "./Modal";
 import { isImage, isVideo } from "@/utils/shared";
 import VideoHtml from "./VideoHtml";
+import Image from "next/image";
 
 type Props = {
     currentPath: string, uploadFiles: (e: any) => void, setCurrentPath: (e: string) => void
@@ -38,7 +39,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
             const res = await fetch(`/api/files/list?folder=${currentPath}`);
             const data = await res.json();
             setFolders(data.folders);
-            setFiles(data.files.map((itm:any)=>({f:itm,path:`/storage/${currentPath}/${itm}`})));
+            setFiles(data.files.map((itm:any)=>({f:itm,path:`/storage${currentPath}/${itm}`})));
             setFileLoading(false)
         }
 
@@ -271,7 +272,9 @@ const FilesList = forwardRef<FilesListRef, Props>(
                                     <div>
                                         <FileIcon className="w-8 h-8 text-blue-500"
                                             fileName={f}
-                                            path={path}
+                                            path={`${path}`}
+                                            height={200}
+                                            width={200}
                                         />
                                         <p className="break-all">{f}</p>
 
@@ -381,14 +384,16 @@ const FilesList = forwardRef<FilesListRef, Props>(
                     className="max-w-[900px]"
                     body={<>
                         {isImage(viewModal) ? <div>
-                            <img
+                            <Image
                                 alt={viewModal}
-                                src={`/storage/${currentPath}/${viewModal}`}
+                                src={`/storage${currentPath}/${viewModal}`}
+                                width={900}
+                                height={1000}
                                 className="w-full max-h-[calc(100dvh-20px)] object-contain"
                             />
                         </div> : isVideo(viewModal) ? <div>
                             <VideoHtml
-                                src={`/storage/${currentPath}/${viewModal}`}
+                                src={`/storage${currentPath}/${viewModal}`}
                                 className="w-full max-h-[calc(100dvh-20px)] object-contain"
                             />
                         </div> : <div>
