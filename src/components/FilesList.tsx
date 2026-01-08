@@ -168,7 +168,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
 
                 {files.length ? <>
                     <button
-                        onClick={() => setSelectedFiles(allSelected ? [] : files)}
+                        onClick={() => setSelectedFiles(allSelected ? [] : files.map((itm:any)=>itm?.f))}
                         className="text-sm text-blue-600 cursor-pointer"
                     >
                         {allSelected ? 'Deselect' : 'Select'} All
