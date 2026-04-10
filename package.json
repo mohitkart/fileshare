@@ -12,6 +12,7 @@
     "@heroicons/react": "^2.2.0",
     "archiver": "^7.0.1",
     "formidable": "^3.5.4",
+    "idb": "^8.0.3",
     "next": "16.1.1",
     "qrcode.react": "^4.2.0",
     "react": "19.2.3",

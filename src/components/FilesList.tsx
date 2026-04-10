@@ -202,7 +202,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
                         {folders.map((f) => (
                             <div
                                 key={f}
-                                className="group p-3 border border-gray-300 rounded hover:bg-gray-50 cursor-pointer relative"
+                                className="group p-2 border border-gray-300 rounded hover:bg-gray-50 cursor-pointer relative"
                                 onDoubleClick={() =>
                                     setCurrentPath(`${currentPath}/${f}`)
                                 }
@@ -237,13 +237,14 @@ const FilesList = forwardRef<FilesListRef, Props>(
                                 onDoubleClick={(e) => {
                                     e.preventDefault()
                                     e.stopPropagation()
-                                    setViewModal(f)
-                                }}
-                                onClick={() => {
                                     setSelectedFiles((prev) =>
                                         !selectedFiles.includes(f) ? [...prev, f]
                                             : prev.filter((x) => x !== f)
                                     );
+                                }}
+                                onClick={() => {
+                                    
+                                    setViewModal(f)
                                 }}
                                 onContextMenu={(e) => {
                                     e.preventDefault();
@@ -254,7 +255,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
                                         type: "file",
                                     });
                                 }}
-                                className={`group p-3 border border-gray-300 rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                className={`group p-2 border border-gray-300 rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
                             >
                                 <div className="flex items-start gap-2">
                                     <input
