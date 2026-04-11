@@ -17,6 +17,14 @@ export function formatFileSize(bytes:number) {
   }
 }
 
+export const parseJson = (str: string) => {
+  try {
+    return JSON.parse(str)
+  } catch (err) {
+    return null
+  }
+}
+
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
 export const isImage = (fileName: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any

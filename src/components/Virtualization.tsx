@@ -26,8 +26,13 @@ const Virtualization = function Virtualization({ list = [], count = 10, RenderCo
 
 
     useEffect(() => {
-        // eslint-disable-next-line react-hooks/set-state-in-effect
-        setPage(1)
+        if (!list.length) {
+            // eslint-disable-next-line react-hooks/set-state-in-effect
+            setData([])
+            setPage(0)
+        } else {
+            setPage(1)
+        }
     }, [list.length])
 
     useEffect(() => {
@@ -42,15 +47,19 @@ const Virtualization = function Virtualization({ list = [], count = 10, RenderCo
                     // eslint-disable-next-line react-hooks/set-state-in-effect
                     setData([...arr])
                 } else {
-                    const arr = list.slice((page - 1) * count, count * page)
-                    setData(prev => ([...prev, ...arr]))
+                    // const start=(page - 1) * count
+                    const start=0
+                    const arr = list.slice(start, count * page)
+                    setData(prev => ([
+                        // ...prev,
+                         ...arr]))
                 }
             } else {
                 // eslint-disable-next-line react-hooks/set-state-in-effect
                 setData([])
             }
         }
-    }, [page,list.length])
+    }, [page,list])
 
     const loadMore = () => {
         const length = dataRef.current.total

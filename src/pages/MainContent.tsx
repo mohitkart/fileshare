@@ -5,66 +5,78 @@ import Modal from "@/components/Modal";
 import HostQr from "@/components/HostQr";
 import FilesList, { FilesListRef } from "@/components/FilesList";
 import { indexedDBStorage } from "../../utills/indexedDBStorage";
-import { formatFileSize } from "@/utils/shared";
+import { formatFileSize, parseJson } from "@/utils/shared";
 import io from "socket.io-client";
 import Virtualization from "@/components/Virtualization";
+import VideoHtml from "@/components/VideoHtml";
 
-const LocalFileItem=memo(function a({uploadFile,item,index,isUploaded,isUploding}:{uploadFile:(files:any[])=>void,item:any,index:number,isUploaded:boolean,isUploding:boolean}){
+const LocalFileItem = memo(function a({ uploadFile, item, index, isUploaded, isUploding }: { uploadFile: (files: any[]) => void, item: any, index: number, isUploaded: boolean, isUploding: boolean }) {
   return <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 shadow-sm hover:shadow-md transition">
-              <div className="flex flex-wrap items-start gap-3 md:gap-4">
-                {/* <!-- Thumbnail icon --> */}
-                <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center shadow-sm">
-                  {/* <i className="fa-regular fa-image text-indigo-400 text-xl"></i> */}
-                  {item.file.type.includes('image/') ? <img
-                    src={URL.createObjectURL(item.file)}
-                    className="w-12 h-12 rounded-xl object-cover"
-                  /> : <></>}
-                </div>
-                {/* <!-- File info --> */}
-                <div className="flex-1 min-w-0">
-                  <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
-                    <div>
-                      <h3 className="text-sm md:text-base font-semibold text-gray-800 truncate">#{index+1}. {item.name}</h3>
-                      <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
-                        <span><i className="fa-regular fa-hard-drive"></i> {formatFileSize(item.file.size)}</span>
-                        <span><i className="fa-regular fa-image"></i> {item.file.type}</span>
-                        <span className={`${isUploaded ? 'text-emerald-600' : 'text-yellow-600'}`}><i className="fa-regular fa-check-circle"></i> {isUploaded ? 'Completed' : 'Pending'}</span>
-                        {!isUploaded&&!isUploding?<>
-                        <span 
-                          className="text-blue-500 cursor-pointer"
-                          onClick={()=>uploadFile([item.file])}>Upload File</span>
-                        </>:<></>}
-                      </div>
-                    </div>
-                    {/* <!-- Uploaded status badge --> */}
-                    {isUploding ? <>
-                      <div className="flex-shrink-0 w-full sm:w-48">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-1 rounded-full">
-                            <i className="fa-solid fa-spinner fa-pulse"></i> Uploading
-                          </span>
-                          <span className="text-xs font-mono text-gray-500">45%</span>
-                        </div>
-                        <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
-                          <div className="bg-gradient-to-r from-amber-400 to-orange-500 h-1.5 rounded-full static-progress-45"></div>
-                        </div>
-                      </div>
-                    </> : <>
-                      <div className="flex-shrink-0">
-                        <span className={`inline-flex items-center gap-1.5
-                      ${isUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'} text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm`}>
-                          <i className="fa-regular fa-circle-check text-emerald-500"></i> {isUploaded ? 'Uploaded' : 'Pending'}
-                        </span>
-                      </div>
-                    </>}
+    <div className="flex flex-wrap items-start gap-3 md:gap-4">
+      {/* <!-- Thumbnail icon --> */}
+      <div className="flex-shrink-0 w-12 h-12 rounded-xl bg-gradient-to-br from-indigo-50 to-blue-50 flex items-center justify-center shadow-sm">
+        {/* <i className="fa-regular fa-image text-indigo-400 text-xl"></i> */}
+        {item.file.type.includes('image/') ? <img
+          src={URL.createObjectURL(item.file)}
+          className="w-12 h-12 rounded-xl object-cover"
+        /> : <></>}
 
-                  </div>
-                </div>
+        {item.file.type.includes('video/') ? <>
+          <VideoHtml
+            src={URL.createObjectURL(item.file)}
+            controls={false}
+            className="w-12 h-12 rounded-xl"
+          />
+        </> : <></>}
+
+      </div>
+      {/* <!-- File info --> */}
+      <div className="flex-1 min-w-0">
+        <div className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+          <div>
+            <h3 className="text-sm md:text-base font-semibold text-gray-800 truncate">#{index + 1}. {item.name}</h3>
+            <div className="flex flex-wrap gap-x-3 gap-y-1 mt-1 text-xs text-gray-500">
+              <span><i className="fa-regular fa-hard-drive"></i> {formatFileSize(item.file.size)}</span>
+              <span><i className="fa-regular fa-image"></i> {item.file.type}</span>
+              <span className={`${isUploaded ? 'text-emerald-600' : 'text-yellow-600'}`}><i className="fa-regular fa-check-circle"></i> {isUploaded ? 'Completed' : 'Pending'}</span>
+              {!isUploaded && !isUploding ? <>
+                <span
+                  className="text-blue-500 cursor-pointer"
+                  onClick={() => uploadFile([item.file])}>Upload File</span>
+              </> : <></>}
+            </div>
+          </div>
+          {/* <!-- Uploaded status badge --> */}
+          {isUploding ? <>
+            <div className="flex-shrink-0 w-full sm:w-48">
+              <div className="flex items-center justify-between gap-2 mb-1">
+                <span className="inline-flex items-center gap-1 bg-amber-50 text-amber-700 text-xs font-semibold px-2 py-1 rounded-full">
+                  <i className="fa-solid fa-spinner fa-pulse"></i> Uploading
+                </span>
+                <span className="text-xs font-mono text-gray-500">{item.uploadingPer}%</span>
+              </div>
+              <div className="w-full bg-gray-100 rounded-full h-1.5 overflow-hidden">
+                <div style={{
+                  width:`${item.uploadingPer}%`
+                }} className="bg-gradient-to-r from-amber-400 to-orange-500 h-1.5 rounded-full static-progress-45"></div>
               </div>
             </div>
+          </> : <>
+            <div className="flex-shrink-0">
+              <span className={`inline-flex items-center gap-1.5
+                      ${isUploaded ? 'bg-emerald-50 text-emerald-700' : 'bg-yellow-50 text-yellow-700'} text-xs font-semibold px-3 py-1.5 rounded-full shadow-sm`}>
+                <i className="fa-regular fa-circle-check text-emerald-500"></i> {isUploaded ? 'Uploaded' : 'Pending'}
+              </span>
+            </div>
+          </>}
+
+        </div>
+      </div>
+    </div>
+  </div>
 })
 
-const UploadingFiles =memo(function UploadingFiles({ uploadFile,currentPath, uploadedId, uploadingId, controlRef }: { currentPath: string, controlRef: any, uploadedId: any, uploadingId: any,uploadFile:(files:any[])=>void }) {
+const UploadingFiles = memo(function UploadingFiles({ uploadFile, currentPath, uploadedId, uploadingId, controlRef }: { currentPath: string, controlRef: any, uploadedId: any, uploadingId: any, uploadFile: (files: any[]) => void }) {
   const [localFiles, setLocalFiles] = useState<any[]>([])
 
   const getFiles = async (path = currentPath) => {
@@ -83,16 +95,18 @@ const UploadingFiles =memo(function UploadingFiles({ uploadFile,currentPath, upl
     }
   }, [currentPath])
 
-  const list=useMemo(()=>{
-    return localFiles.map(itm=>{
+  const list = useMemo(() => {
+    return localFiles.map(itm => {
+      const isUploding=uploadingId?.[itm.id] ? true : false
       return {
         ...itm,
-        isUploding: uploadingId?.[itm.id] ? true : false,
+        isUploding: isUploding,
+        uploadingPer:uploadingId?.[itm.id]?.percent||0,
         isUploaded: uploadedId?.[itm.id] ? true : false,
       }
     })
-    .filter(itm=>!itm.isUploaded)
-  },[localFiles,uploadedId,uploadingId])
+      .filter(itm => !itm.isUploaded)
+  }, [localFiles, uploadedId, uploadingId])
 
   return <>
     <div className="p-5 md:p-6">
@@ -102,8 +116,8 @@ const UploadingFiles =memo(function UploadingFiles({ uploadFile,currentPath, upl
           <span>Current uploads : {list.length}</span>
         </div>
         <span
-        onClick={()=>uploadFile(list.map(itm=>itm.file))}
-        className="text-xs text-blue-500 cursor-pointer bg-gray-50 px-2 py-1 rounded-full">
+          onClick={() => uploadFile(list.map(itm => itm.file))}
+          className="text-xs text-blue-500 cursor-pointer bg-gray-50 px-2 py-1 rounded-full">
           Upload All
         </span>
       </div>
@@ -115,7 +129,7 @@ const UploadingFiles =memo(function UploadingFiles({ uploadFile,currentPath, upl
         <Virtualization
           count={5}
           list={list}
-          RenderComponent={({ item ,index}: { item: any,index:number }) => {
+          RenderComponent={({ item, index }: { item: any, index: number }) => {
             return <LocalFileItem
               isUploaded={item.isUploaded}
               isUploding={item.isUploding}
@@ -133,8 +147,8 @@ const UploadingFiles =memo(function UploadingFiles({ uploadFile,currentPath, upl
 
 export default function Main() {
   const randomValue = 'mk_start';
-   const v = localStorage.getItem('currentPath') || ''
-  const [currentPath, setCurrentPath] = useState(v||randomValue);
+  const v = localStorage.getItem('currentPath') || ''
+  const [currentPath, setCurrentPath] = useState(v || randomValue);
   const [newFolder, setNewFolder] = useState("");
   const [isQr, setIsQr] = useState(false);
   const [uploading, setUploading] = useState(false);
@@ -145,7 +159,7 @@ export default function Main() {
   const inputFileRef = useRef<HTMLInputElement>(null);
   const controlRef = useRef<any>(null);
   const socketRef = useRef<any>(null);
-  const maxUpload = 10
+  const maxUpload = 1
 
 
   const createFolder = async () => {
@@ -168,7 +182,7 @@ export default function Main() {
     if (currentPath != randomValue) localStorage.setItem('currentPath', currentPath)
   }, [currentPath])
 
-  const upload = async (files: any,from:'storage'|'file'='file') => {
+  const upload = async (files: any, from: 'storage' | 'file' = 'file') => {
     const uploadList = []
     for (const file of files) {
       const filename = `${currentPath}/${file.name}`.replaceAll(' ', '_').toLowerCase()
@@ -179,23 +193,40 @@ export default function Main() {
         folder: currentPath
       }
       uploadList.push({ id: filename, file })
-      if(from=='file') await indexedDBStorage.put(payload, 'files')
+      if (from == 'file') await indexedDBStorage.put(payload, 'files')
     }
     controlRef.current?.load()
     console.log("uploadList", uploadList)
 
-    const uploadChunk = async (files: any[]) => {
-      const fd = new FormData();
-      for (const item of files) {
-        // append file in formData
-        fd.append("files", item.file as any)
-      }
-      const res = await fetch(`/api/files/upload?folder=${currentPath}`, {
-        method: "POST",
-        body: fd,
+    const uploadChunk = async (files: any[], onProgress: (per: number) => void) => {
+      return new Promise((resolve, reject) => {
+        const xhr = new XMLHttpRequest();
+        xhr.open("POST", `/api/files/upload?folder=${currentPath}`);
+        xhr.upload.onprogress = (event) => {
+          if (event.lengthComputable) {
+            const percent = Math.round((event.loaded / event.total) * 100);
+            onProgress(percent);
+          }
+        }
+        // xhr.setRequestHeader()
+
+        xhr.onload = async () => {
+          console.log("Upload complete");
+          const res = await xhr.response
+          resolve(parseJson(res))
+        };
+
+        xhr.onerror = async () => {
+          const res = await xhr.response
+          resolve(parseJson(res))
+        }
+
+        const fd = new FormData();
+        for (const item of files) {
+          fd.append("files", item.file as any)
+        }
+        xhr.send(fd);
       })
-      const resValue = await res.json()
-      return resValue
     }
 
     const pageLength = Math.ceil(uploadList.length / maxUpload);
@@ -208,7 +239,19 @@ export default function Main() {
         return acc
       }, {})
       setUploadingId(uploading)
-      const res = await uploadChunk(currentList)
+       
+      const onprogress=(per:number)=>{
+         const uploadingPer: any = currentList.reduce((acc: any, itm) => {
+        acc[itm.id] = {percent:per}
+        return acc
+      }, {})
+        setUploadingId(prev=>({
+          ...prev,
+          ...uploadingPer
+        }))
+      }
+      const res:any = await uploadChunk(currentList,onprogress)
+
       if (res.success) {
         setUploadedId((prev: any) => ({
           ...prev,
@@ -217,7 +260,6 @@ export default function Main() {
         currentList.map(item => {
           indexedDBStorage.removeItem(item.id, 'files')
         })
-        console.log("uploaded", uploading)
         socketRef.current.emit('upload_file', {
           path: currentPath,
           files: res.files
@@ -226,7 +268,7 @@ export default function Main() {
         setFailedId((prev: any) => ({
           ...prev,
           ...uploading,
-          error:res.message
+          error: res.message
         }))
         console.log("failed", uploading)
       }
@@ -239,11 +281,11 @@ export default function Main() {
     }
   }
 
-  const uploadFiles = async (list: FileList | null,from:'storage'|'file'='file') => {
+  const uploadFiles = async (list: FileList | null, from: 'storage' | 'file' = 'file') => {
     if (uploading) return
     if (!list) return;
     setUploading(true)
-    const res = await upload(list,from)
+    const res = await upload(list, from)
     setUploading(false)
     childRef?.current?.loadData()
     return res
@@ -259,7 +301,7 @@ export default function Main() {
   };
 
   useEffect(() => {
-    socketRef.current=io(process.env.NEXT_PUBLIC_SOCKET_API);
+    socketRef.current = io(process.env.NEXT_PUBLIC_SOCKET_API);
     if (inputFileRef.current) {
       inputFileRef.current.setAttribute("webkitdirectory", 'true');
       inputFileRef.current.setAttribute("directory", 'true');
@@ -293,7 +335,7 @@ export default function Main() {
             className="hidden"
             id="folderUpload"
             onChange={async (e) => {
-             await uploadFiles(e.target.files)
+              await uploadFiles(e.target.files)
               // e.target.value = ""
             }}
           />
@@ -365,9 +407,9 @@ export default function Main() {
           </button>
         </form>
 
-         <div className="text-red-500">{failedId?.error}</div>
+        <div className="text-red-500">{failedId?.error}</div>
 
-        <UploadingFiles uploadFile={(e:any)=>uploadFiles(e,'storage')} currentPath={currentPath} controlRef={controlRef} uploadingId={uploadingId} uploadedId={uploadedId} />
+        <UploadingFiles uploadFile={(e: any) => uploadFiles(e, 'storage')} currentPath={currentPath} controlRef={controlRef} uploadingId={uploadingId} uploadedId={uploadedId} />
 
         {currentPath != 'mk_start' ? <>
           <FilesList

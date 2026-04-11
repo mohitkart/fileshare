@@ -21,7 +21,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
-    const fileSize=300 * 1024 * 1024 // 300 MB
+    const fileSize=2 * 1024 * 1024 * 1024 // 2 GB
 
     const form = formidable({
       uploadDir,
@@ -29,7 +29,7 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       multiples: true,
       maxFileSize:fileSize,
       maxTotalFileSize:fileSize,
-      filename: (_, __, part) => {
+      filename: (name,ext, part) => {
         return `${part.originalFilename}`.replaceAll(' ', '_').toLowerCase().replaceAll('%','percent');
         // return `${Date.now()}-${part.originalFilename}`.replaceAll(' ', '_');
       },
