@@ -8,8 +8,9 @@ import { indexedDBStorage } from "../../utills/indexedDBStorage";
 import { formatFileSize, parseJson } from "@/utils/shared";
 import io from "socket.io-client";
 import Virtualization from "@/components/Virtualization";
+import { fire } from "@/components/Swal";
 
-const LocalFileItem = memo(function a({ uploadFile, item, index, isUploaded, isUploding }: { uploadFile: (files: any[]) => void, item: any, index: number, isUploaded: boolean, isUploding: boolean }) {
+const LocalFileItem = memo(function a({ uploadFile,removeItem, item, index, isUploaded, isUploding }: {removeItem:(id:string)=>void, uploadFile: (files: any[]) => void, item: any, index: number, isUploaded: boolean, isUploding: boolean }) {
   return <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 shadow-sm hover:shadow-md transition">
     <div className="flex flex-wrap items-start gap-3 md:gap-4">
       {/* <!-- Thumbnail icon --> */}
@@ -42,7 +43,10 @@ const LocalFileItem = memo(function a({ uploadFile, item, index, isUploaded, isU
                 <span
                   className="text-blue-500 cursor-pointer"
                   onClick={() => uploadFile([item.file])}>Upload File</span>
+
+                  <span className="text-red-500 cursor-pointer" onClick={()=>removeItem(item.id)}>🗑️</span>
               </> : <></>}
+              
             </div>
           </div>
           {/* <!-- Uploaded status badge --> */}
@@ -111,6 +115,19 @@ const UploadingFiles = memo(function UploadingFiles({ uploadFile, currentPath, u
       });
   }, [localFiles, uploadedId, uploadingId])
 
+  const removeItem = async (id: string) => {
+    const name=localFiles.find(itm=>itm.id==id)?.name
+    fire({
+      icon: 'warning',
+      title: `Do you want to delete '${name}'?`, cancelButtonText: 'No', confirmButtonText: 'Yes', showCancelButton: true
+    }).then(async res => {
+      if (res.isConfirmed) {
+        await indexedDBStorage.removeItem(id, 'files')
+        setLocalFiles(prev => prev.filter(itm => itm.id != id))
+      }
+    })
+  }
+
   return <>
     <div className="p-5 md:p-6">
       <div className="mb-3 flex items-center justify-between">
@@ -137,6 +154,7 @@ const UploadingFiles = memo(function UploadingFiles({ uploadFile, currentPath, u
               isUploaded={item.isUploaded}
               isUploding={item.isUploding}
               uploadFile={uploadFile}
+              removeItem={removeItem}
               item={item}
               index={index}
             />
@@ -148,9 +166,17 @@ const UploadingFiles = memo(function UploadingFiles({ uploadFile, currentPath, u
 })
 
 
+const getLocalStorage=(key:string)=>{
+  try{
+    return localStorage.getItem(key) || ''
+  }catch(err){
+    return ''
+  }
+}
+
 export default function Main() {
   const randomValue = 'mk_start';
-  const v = localStorage.getItem('currentPath') || ''
+  const v = getLocalStorage('currentPath')
   const [currentPath, setCurrentPath] = useState(v || randomValue);
   const [newFolder, setNewFolder] = useState("");
   const [isQr, setIsQr] = useState(false);
