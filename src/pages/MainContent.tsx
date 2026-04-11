@@ -8,7 +8,6 @@ import { indexedDBStorage } from "../../utills/indexedDBStorage";
 import { formatFileSize, parseJson } from "@/utils/shared";
 import io from "socket.io-client";
 import Virtualization from "@/components/Virtualization";
-import VideoHtml from "@/components/VideoHtml";
 
 const LocalFileItem = memo(function a({ uploadFile, item, index, isUploaded, isUploding }: { uploadFile: (files: any[]) => void, item: any, index: number, isUploaded: boolean, isUploding: boolean }) {
   return <div className="bg-white rounded-xl border border-gray-100 p-3 md:p-4 shadow-sm hover:shadow-md transition">
@@ -22,11 +21,11 @@ const LocalFileItem = memo(function a({ uploadFile, item, index, isUploaded, isU
         /> : <></>}
 
         {item.file.type.includes('video/') ? <>
-          <VideoHtml
-            src={URL.createObjectURL(item.file)}
-            controls={false}
+          <video
             className="w-12 h-12 rounded-xl"
-          />
+          >
+            <source src={URL.createObjectURL(item.file)} type={item.file.type} />
+          </video>
         </> : <></>}
 
       </div>
