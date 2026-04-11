@@ -6,9 +6,9 @@ import FileIcon from "./FileIcon";
 import Modal from "./Modal";
 import { isImage, isVideo } from "@/utils/shared";
 import VideoHtml from "./VideoHtml";
-import Image from "next/image";
-
+import Virtualization from "./Virtualization";
 type Props = {
+    socketRef:any,
     currentPath: string, uploadFiles: (e: any) => void, setCurrentPath: (e: string) => void
 };
 
@@ -18,11 +18,12 @@ export type FilesListRef = {
 
 // eslint-disable-next-line react/display-name
 const FilesList = forwardRef<FilesListRef, Props>(
-    ({ currentPath,
+    ({ socketRef,
+        currentPath,
         uploadFiles = (e) => { },
         setCurrentPath = (e) => { } }, ref) => {
         const [folders, setFolders] = useState<string[]>([]);
-        const [files, setFiles] = useState<string[]>([]);
+        const [files, setFiles] = useState<any[]>([]);
         const [selectedFiles, setSelectedFiles] = useState<string[]>([]);
         const [dragging, setDragging] = useState(false);
         const [fileLoading, setFileLoading] = useState(true);
@@ -39,7 +40,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
             const res = await fetch(`/api/files/list?folder=${currentPath}`);
             const data = await res.json();
             setFolders(data.folders);
-            setFiles(data.files.map((itm:any)=>({f:itm,path:`/storage${currentPath}/${itm}`})));
+            setFiles(data.files.map((itm: any) => ({ f: itm, path: `/storage${currentPath}/${itm}` })));
             setFileLoading(false)
         }
 
@@ -91,6 +92,26 @@ const FilesList = forwardRef<FilesListRef, Props>(
             load();
             setSelectedFiles([]);
         }, [currentPath]);
+
+        useEffect(() => {
+            if (socketRef.current) {
+                console.log("socketRef", socketRef)
+                socketRef.current.on("files_uploaded", (data: any) => {
+                    setFiles((prev: any[]) => {
+                        const unique = [...new Set([...prev.map((itm: any) => itm.f), ...data.files.map((itm: any) => itm.name)])]
+                        return unique.map(itm => ({
+                            f: itm,
+                            path: `/storage${currentPath}/${itm}`
+                        }))
+                    })
+                    console.log("File List page event:", data);
+                });
+                socketRef.current.on("remove_file", (data: any) => {
+                    console.log("remove_file", data)
+                    setFiles((prev: any[]) => prev.filter(itm => !data.files.includes(itm.f)))
+                });
+            }
+        }, [])
 
 
         const allSelected = files.length == selectedFiles.length
@@ -154,6 +175,11 @@ const FilesList = forwardRef<FilesListRef, Props>(
                                     });
                                 }
 
+                                socketRef.current.emit('remove_file', {
+                                    files: selectedFiles,
+                                    path: currentPath
+                                })
+
                                 setSelectedFiles([]);
                                 load();
                             }}
@@ -169,7 +195,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
 
                 {files.length ? <>
                     <button
-                        onClick={() => setSelectedFiles(allSelected ? [] : files.map((itm:any)=>itm?.f))}
+                        onClick={() => setSelectedFiles(allSelected ? [] : files.map((itm: any) => itm?.f))}
                         className="text-sm text-blue-600 cursor-pointer"
                     >
                         {allSelected ? 'Deselect' : 'Select'} All
@@ -231,102 +257,110 @@ const FilesList = forwardRef<FilesListRef, Props>(
                             </div>
                         ))}
 
-                        {files.map(({f,path}:any) => (
-                            <div
-                                key={f}
-                                onDoubleClick={(e) => {
-                                    e.preventDefault()
-                                    e.stopPropagation()
-                                    setSelectedFiles((prev) =>
-                                        !selectedFiles.includes(f) ? [...prev, f]
-                                            : prev.filter((x) => x !== f)
-                                    );
-                                }}
-                                onClick={() => {
-                                    
-                                    setViewModal(f)
-                                }}
-                                onContextMenu={(e) => {
-                                    e.preventDefault();
-                                    setContextMenu({
-                                        x: e.clientX,
-                                        y: e.clientY,
-                                        name: f,
-                                        type: "file",
-                                    });
-                                }}
-                                className={`group p-2 border border-gray-300 rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
-                            >
-                                <div className="flex items-start gap-2">
-                                    <input
-                                        type="checkbox"
-                                        className="h-[20px] w-[20px]"
-                                        checked={selectedFiles.includes(f)}
-                                        onChange={() => {
-                                            setSelectedFiles((prev) =>
-                                                !selectedFiles.includes(f) ? [...prev, f]
-                                                    : prev.filter((x) => x !== f)
-                                            );
-                                        }}
-                                    />
 
-                                    <div>
-                                        <FileIcon className="w-8 h-8 text-blue-500"
-                                            fileName={f}
-                                            path={`${path}`}
-                                            height={200}
-                                            width={200}
+                        <Virtualization
+                            count={12}
+                            list={files}
+                            RenderComponent={({ item, index }: { item: any, index: number }) => {
+                                const { f, path } = item
+                                return <div
+                                    key={f}
+                                    onDoubleClick={(e) => {
+                                        e.preventDefault()
+                                        e.stopPropagation()
+                                        setSelectedFiles((prev) =>
+                                            !selectedFiles.includes(f) ? [...prev, f]
+                                                : prev.filter((x) => x !== f)
+                                        );
+                                    }}
+                                    onClick={() => {
+                                        setViewModal(f)
+                                    }}
+                                    onContextMenu={(e) => {
+                                        e.preventDefault();
+                                        setContextMenu({
+                                            x: e.clientX,
+                                            y: e.clientY,
+                                            name: f,
+                                            type: "file",
+                                        });
+                                    }}
+                                    className={`group p-2 border border-gray-300 rounded relative ${selectedFiles.includes(f) ? 'bg-blue-50' : 'hover:bg-gray-50'}`}
+                                >
+                                    <div className="">
+                                        <button
+                                            type="button"
+                                            className="text-[18px]"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setSelectedFiles((prev) =>
+                                                    !selectedFiles.includes(f) ? [...prev, f]
+                                                        : prev.filter((x) => x !== f)
+                                                );
+                                            }}
+                                        >
+                                            {selectedFiles.includes(f) ? '✅' : '⬜'}
+                                        </button> #{index + 1}
+
+                                        <div>
+                                         
+                                            <FileIcon className="w-8 h-8 text-blue-500"
+                                                fileName={f}
+                                                path={`${path}`}
+                                                height={200}
+                                                width={200}
+                                            />
+                                            <p title={f} className="break-all truncate">{f}</p>
+
+                                        </div>
+                                    </div>
+
+                                    <div className="flex justify-between mt-2">
+                                        <a
+                                            href={`/storage/${currentPath}/${f}`}
+                                            onClick={e => e.stopPropagation()}
+                                            download
+                                            className="text-blue-600 text-sm"
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
+                                            </svg>
+
+                                        </a>
+
+                                        <TrashIcon
+                                            className="w-5 h-5 text-red-500 hidden group-hover:block cursor-pointer"
+                                            onClick={(e) => {
+                                                e.stopPropagation();
+                                                deleteItem(f)
+                                            }}
                                         />
-                                        <p className="break-all">{f}</p>
+                                        <button
+                                            className="text-xs text-blue-600 cursor-pointer"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                renameItem(f)
+                                            }}
+                                        >
+                                            Rename
+                                        </button>
+                                        <button
+                                            className="text-xs text-blue-600 cursor-pointer"
+                                            onClick={(e) => {
+                                                e.stopPropagation()
+                                                setViewModal(f)
+                                            }}
+                                        >
+                                            <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
+                                                <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
+                                            </svg>
 
+                                        </button>
                                     </div>
                                 </div>
-
-                                <div className="flex justify-between mt-2">
-                                    <a
-                                        href={`/storage/${currentPath}/${f}`}
-                                        onClick={e => e.stopPropagation()}
-                                        download
-                                        className="text-blue-600 text-sm"
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-5">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M3 16.5v2.25A2.25 2.25 0 0 0 5.25 21h13.5A2.25 2.25 0 0 0 21 18.75V16.5M16.5 12 12 16.5m0 0L7.5 12m4.5 4.5V3" />
-                                        </svg>
-
-                                    </a>
-
-                                    <TrashIcon
-                                        className="w-5 h-5 text-red-500 hidden group-hover:block cursor-pointer"
-                                        onClick={(e) => {
-                                            e.stopPropagation();
-                                            deleteItem(f)
-                                        }}
-                                    />
-                                    <button
-                                        className="text-xs text-blue-600 cursor-pointer"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            renameItem(f)
-                                        }}
-                                    >
-                                        Rename
-                                    </button>
-                                    <button
-                                        className="text-xs text-blue-600 cursor-pointer"
-                                        onClick={(e) => {
-                                            e.stopPropagation()
-                                            setViewModal(f)
-                                        }}
-                                    >
-                                        <svg xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24" strokeWidth={1.5} stroke="currentColor" className="size-6">
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M2.036 12.322a1.012 1.012 0 0 1 0-.639C3.423 7.51 7.36 4.5 12 4.5c4.638 0 8.573 3.007 9.963 7.178.07.207.07.431 0 .639C20.577 16.49 16.64 19.5 12 19.5c-4.638 0-8.573-3.007-9.963-7.178Z" />
-                                            <path strokeLinecap="round" strokeLinejoin="round" d="M15 12a3 3 0 1 1-6 0 3 3 0 0 1 6 0Z" />
-                                        </svg>
-
-                                    </button>
-                                </div>
-                            </div>
-                        ))}
+                            }}
+                        />
                     </div>
                 </>}
             </div>
@@ -385,7 +419,7 @@ const FilesList = forwardRef<FilesListRef, Props>(
                     className="max-w-[900px]"
                     body={<>
                         {isImage(viewModal) ? <div>
-                            <Image
+                            <img
                                 alt={viewModal}
                                 src={`/storage${currentPath}/${viewModal}`}
                                 width={900}

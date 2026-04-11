@@ -22,5 +22,5 @@ export const isImage = (fileName: any) => {
     // eslint-disable-next-line @typescript-eslint/no-explicit-any
     const ext: any = fileName.split(".").pop()?.toLowerCase() || "";
 
-    return (ext == 'jpg' || ext == 'png') ? true : false
+    return (ext == 'jpg' || ext == 'png'|| ext == 'webp'||ext=='avif'||ext=='jpeg') ? true : false
 }

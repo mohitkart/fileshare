@@ -2,10 +2,9 @@ import type { NextApiRequest, NextApiResponse } from "next";
 import formidable, { File } from "formidable";
 import fs from "fs";
 import path from "path";
-import { NextResponse } from "next/server";
 
 export const config = {
-  api: { bodyParser: false },
+  api: { bodyParser: false }
 };
 
 export default function handler(req: NextApiRequest, res: NextApiResponse) {
@@ -22,24 +21,32 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
       fs.mkdirSync(uploadDir, { recursive: true });
     }
 
+    const fileSize=300 * 1024 * 1024 // 300 MB
+
     const form = formidable({
       uploadDir,
       keepExtensions: true,
       multiples: true,
+      maxFileSize:fileSize,
+      maxTotalFileSize:fileSize,
       filename: (_, __, part) => {
-        return `${Date.now()}-${part.originalFilename}`.replaceAll(' ', '_');
+        return `${part.originalFilename}`.replaceAll(' ', '_').toLowerCase().replaceAll('%','percent');
+        // return `${Date.now()}-${part.originalFilename}`.replaceAll(' ', '_');
       },
     });
 
     form.parse(req, (err, _, files) => {
-      if (err) return res.status(500).end();
+      if (err) return res.status(500).json({
+      success: false,
+      message: err?.message||err
+    })
 
       const uploaded = files.files as File[] | File;
       const fileArray = Array.isArray(uploaded) ? uploaded : [uploaded];
 
       const result = fileArray.map((file) => ({
         name: path.basename(file.filepath),
-        url: `/storage/${folder}/${path.basename(file.filepath)}`,
+        url: `/storage/${folder}/${path.basename(file.filepath)}`.replaceAll('//','/'),
       }));
 
       res.json({ files: result, success: true });
@@ -47,9 +54,9 @@ export default function handler(req: NextApiRequest, res: NextApiResponse) {
   }
   // eslint-disable-next-line @typescript-eslint/no-explicit-any
   catch (error: any) {
-    return NextResponse.json({
+    return res.status(500).json({
       success: false,
-      message: error?.message
+      message: error?.message||error
     })
   }
 }
