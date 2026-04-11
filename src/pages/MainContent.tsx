@@ -106,6 +106,10 @@ const UploadingFiles = memo(function UploadingFiles({ uploadFile, currentPath, u
       }
     })
       .filter(itm => !itm.isUploaded)
+      .sort((a, b) => {
+        if (a.isUploding === b.isUploding) return 0;
+        return a.isUploding ? -1 : 1;
+      });
   }, [localFiles, uploadedId, uploadingId])
 
   return <>
@@ -196,7 +200,7 @@ export default function Main() {
       if (from == 'file') await indexedDBStorage.put(payload, 'files')
     }
     controlRef.current?.load()
-    console.log("uploadList", uploadList)
+    // console.log("uploadList", uploadList)
 
     const uploadChunk = async (files: any[], onProgress: (per: number) => void) => {
       return new Promise((resolve, reject) => {
